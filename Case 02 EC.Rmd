@@ -1,0 +1,92 @@
+---
+title: "Case 02 EC"
+author: "Michael Li"
+date: "March 29, 2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+df <- read_csv('case_02_data.csv')
+df
+```
+
+```{r}
+# create variable to indicate whether or not plaYer had batting average above 0.3
+df_mod <- df %>% 
+  mutate(bat30 = if_else(AVG >= 0.3, 1, 0))
+```
+
+```{r}
+# calculate probabilities
+picalc <- function(X,beta){
+  pi <- 1:nrow(X)
+  expn <- 1:nrow(X)
+  for (i in 1:nrow(X)){
+    expn[i] <- 0
+    for (j in 1:ncol(X)){
+      expo <- X[i,j] * beta[j]
+      expn[i] <- expo + expn[i]
+    }
+    pi[i] <- exp(expn[i])/(1+exp(expn[i]))
+    }
+  return(pi)
+}
+```
+
+```{r}
+# find W 
+Wcalc <- function(pi){
+  W <- matrix(0,length(pi),length(pi))
+  for (i in 1:length(pi)){
+    W[i,i] <- pi[i]*(1-pi[i])
+    }
+  return(W)
+}
+```
+
+```{r}
+# logistic function
+myglm <- function(X,Y,covs, obs, dif) {
+  beta <- rep(0, (covs+1))
+  intercept <- rep(1, obs)
+  X_n <- cbind(intercept,X)
+  deriv <- 1:(covs+1)
+  diff <- 100000
+  while(diff > dif) { # Newton Raphson method
+    pi <- as.vector(picalc(X_n,beta))
+    W <- Wcalc(pi)
+    deriv <- (solve(t(X_n)%*%W%*%as.matrix(X_n))) %*% (t(X_n)%*%(Y - pi)) 
+    beta = beta + deriv
+    diff <- sum(deriv^2)
+    }
+  return(beta)
+}
+```
+
+```{r}
+myglm(df_mod[,c(9:10)], df_mod$bat30, 2, nrow(df_mod), 0.0000001)
+```
+
+We can use the above binary logistic regression model to predict whether or not a player would have a batting average above 0.300. The model above uses weight and height as covariates, allowing you to plug in values and use the coefficient point estimates to predict whether or not a players has over a 0.300 batting average.
+
+# References
+
+[1] Srivastava, T. https://www.analyticsvidhya.com/blog/2015/10/basics-logistic-regression/.
+
+
+
+
+
+
+
+
